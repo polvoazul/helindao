@@ -1,9 +1,9 @@
 #include <Arduino.h>
-// #include "FastLED.h"
+#include <FastLED.h>
 #include <AceRoutine.h>
 #include <AceButton.h>
+#include <Melody.h>
 #include <Musician.h>
-
 
 
 using namespace ace_button;
@@ -15,9 +15,10 @@ using namespace ace_routine;
 using ace_routine::CoroutineScheduler;
 
 constexpr uint8_t
-  PIN_LED_STRIP_DATA = 4,
   PIN_BUTTON = 2,
-  PIN_BUZZER = 3;
+  PIN_BUZZER = 3,
+  PIN_LED_STRIP_DATA = 4,
+  LEDC_CHANNEL_BUZZER = 0;
 
 // GLOBALS
 struct Outputs {
@@ -28,7 +29,7 @@ struct Outputs {
 
   void setup() {
     // Setup Leds
-    constexpr EOrder RGB_ORDER = 1;
+    constexpr EOrder RGB_ORDER = EOrder::RGB;
     // FastLED.addLeds<LED_MODEL>((CRGB*)matrix, MATRIX_N * MATRIX_N);
     FastLED.addLeds<NEOPIXEL, PIN_LED_STRIP_DATA>((CRGB*)strip, STRIP_N);
   }
@@ -38,7 +39,7 @@ struct Outputs {
 struct Data {
   uint8_t strip_bounce_score[output.STRIP_N] = {};
   uint8_t strip_bounce_current_x = 0;
-  Musician buzzer_musician{ PIN_BUZZER };
+  Musician buzzer_musician = Musician( PIN_BUZZER, LEDC_CHANNEL_BUZZER );
 
   void setup() {}
   void dump() {
@@ -57,7 +58,7 @@ class Inputs {
 public:
   AceButton hit{ PIN_BUTTON };
 
-  static void handle_hit(AceButton* button, uint8_t event_type) {
+  static void handle_hit(AceButton* button, uint8_t event_type, uint8_t buttonState) {
     if(event_type != AceButton::kEventPressed) return;
     data.strip_bounce_score[data.strip_bounce_current_x] += 60;
     data.buzzer_musician.getMelody()->restart();
@@ -72,7 +73,7 @@ public:
 
   void setup() {
     pinMode(PIN_BUTTON, INPUT_PULLUP);
-    hit.getButtonConfig()->setEventHandler(handle_hit);
+    hit.getButtonConfig()->setEventHandler(&handle_hit);
   }
 
   void read() {
