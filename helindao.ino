@@ -1,4 +1,3 @@
-
 #include "FastLED.h"
 #include <AceRoutine.h>
 #include <AceButton.h>
@@ -41,6 +40,11 @@ struct Data {
   Musician buzzer_musician{ PIN_BUZZER };
 
   void setup() {}
+  void dump() {
+    for (int i : strip_bounce_score) {
+      Serial.print("Score"); Serial.println(i);
+    }
+  }
 
 } data;
 
@@ -56,7 +60,7 @@ public:
     if(event_type != AceButton::kEventPressed) return;
     data.strip_bounce_score[data.strip_bounce_current_x] += 60;
     data.buzzer_musician.getMelody()->restart();
-        data.buzzer_musician.stop();
+    data.buzzer_musician.stop();
     data.buzzer_musician.play();
     data.buzzer_musician.refresh();
     Serial.print("HIT: ");
@@ -113,15 +117,18 @@ COROUTINE(write_outputs) {
 
 
 COROUTINE(strip_bounce) {
-  constexpr int SPEED = 20;
-  constexpr int DELAY = 1000 / SPEED;
-  constexpr int SATURATION = 200;
+  constexpr int SPEED = 20,
+    DELAY = 1000 / SPEED,
+    HUE_SPEED = 1,
+    SATURATION = 200;
+  constexpr uint8_t SCORE_DECAY = 3;
   static int8_t direction = 1;
   static uint8_t hue = 0;
   COROUTINE_LOOP() {
-    hue += 1;
-    output.strip[data.strip_bounce_current_x].setHSV(
-      hue, SATURATION, data.strip_bounce_score[data.strip_bounce_current_x]);
+    hue += HUE_SPEED;
+    auto *score = &data.strip_bounce_score[data.strip_bounce_current_x];
+    output.strip[data.strip_bounce_current_x].setHSV(hue, SATURATION, *score);
+    *score = *score > SCORE_DECAY ? *score - SCORE_DECAY : 0;
     switch (data.strip_bounce_current_x) {
       case 0: direction = 1; break;
       case output.STRIP_N - 1: direction = -1; break;
@@ -139,7 +146,7 @@ COROUTINE(strip_bounce) {
 // Melody melody_valid(" (cgc*)**---");
 
 //Invalid choice kind-of sound
-// Melody melody_invalid(" (cg_)__");
+Melody melody_invalid(" (cg_)__");
 
 const char melody_simple[] = "(cge+)*";
 
@@ -151,7 +158,7 @@ class BuzzerTone: public Coroutine {
   void setup() {
     melody.setScore(melody_simple);
     melody.setTempo(200);
-    data.buzzer_musician.setMelody(&melody);
+    data.buzzer_musician.setMelody(&melody_invalid);
     data.buzzer_musician.setBreath(90);
     data.buzzer_musician.play();
     data.buzzer_musician.refresh();
@@ -166,6 +173,11 @@ class BuzzerTone: public Coroutine {
     }
   }
 } buzzer_tone;
+// Helpers
+
+void dump() {
+  data.dump();
+}
 
 // Arduino CODE
 
@@ -186,4 +198,8 @@ void setup() {
 
 void loop() {
   CoroutineScheduler::loop();
+  if (Serial.available() > 0) {  
+    while (Serial.available()) {Serial.read();} 
+    dump();
+  }
 }
