@@ -17,4 +17,7 @@ public:
   void off() {
     digitalWrite(pin, LOW);
   }
+  void set(bool on) {
+    if(on) this->on(); else off();
+  }
 };

@@ -4,7 +4,7 @@
 #include <AceButton.h>
 #include <Melody.h>
 #include <Musician.h>
-#include "led.cc"
+#include "led.cpp"
 
 #include <vector>
 
@@ -16,17 +16,19 @@ using namespace ace_routine;
 
 using ace_routine::CoroutineScheduler;
 
+
+
 namespace PIN { enum ENUM : uint8_t {
   BUTTON = 2,
   LED_STRIP_DATA = 4,
   BUZZER = 5,
 
-  WHACK_MOLE_BUTTON1 = 11,
-  WHACK_MOLE_BUTTON2 = 12,
-  WHACK_MOLE_BUTTON3 = 13,
-  WHACK_MOLE_LED1 = 16,
-  WHACK_MOLE_LED2 = 17,
-  WHACK_MOLE_LED3 = 18,
+  WHACK_MOLE_BUTTON1 = 21,
+  WHACK_MOLE_BUTTON2 = 22,
+  WHACK_MOLE_BUTTON3 = 23,
+  WHACK_MOLE_LED1 = 25,
+  WHACK_MOLE_LED2 = 26,
+  WHACK_MOLE_LED3 = 27,
 
   __END__ = 99
 };}
@@ -45,7 +47,7 @@ struct Outputs {
 
   void setup() {
     // Setup Leds array
-    constexpr EOrder RGB_ORDER = EOrder::RGB;
+    // constexpr EOrder RGB_ORDER = EOrder::RGB;
     // FastLED.addLeds<LED_MODEL>((CRGB*)matrix, MATRIX_N * MATRIX_N);
     FastLED.addLeds<NEOPIXEL, PIN::LED_STRIP_DATA>((CRGB*)strip, STRIP_N);
 
@@ -58,10 +60,10 @@ struct Data {
   uint8_t strip_bounce_score[output.STRIP_N] = {};
   uint8_t strip_bounce_current_x = 0;
   Musician buzzer_musician = Musician( PIN::BUZZER, LEDC_CHANNEL_BUZZER );
-  bool whack_mole_present[WHACK_MOLE_N];
-  int whack_mole_score = 0;
 
-  void setup() {}
+
+  void setup() = delete; // data needs to be dumb
+
   void dump() {
     for (int i : strip_bounce_score) {
       Serial.print("Score"); Serial.println(i);
@@ -75,15 +77,16 @@ struct Data {
 // INPUTS
 
 struct Inputs { // convert to namespace and globals?
+  ButtonConfig _hit_config, _whack_mole_config;
   AceButton hit;
   AceButton whack_mole_button[3];
 
   Inputs():
-    hit(PIN::BUTTON)
+    hit(&_hit_config, PIN::BUTTON, HIGH, 0)
   {
-    whack_mole_button[0].init(PIN::WHACK_MOLE_BUTTON1, HIGH, 0);
-    whack_mole_button[1].init(PIN::WHACK_MOLE_BUTTON2, HIGH, 1);
-    whack_mole_button[2].init(PIN::WHACK_MOLE_BUTTON3, HIGH, 2);
+    whack_mole_button[0].init(&_whack_mole_config, PIN::WHACK_MOLE_BUTTON1, HIGH, 0);
+    whack_mole_button[1].init(&_whack_mole_config, PIN::WHACK_MOLE_BUTTON2, HIGH, 1);
+    whack_mole_button[2].init(&_whack_mole_config, PIN::WHACK_MOLE_BUTTON3, HIGH, 2);
   }
 
   static void handle_hit(AceButton* button, uint8_t event_type, uint8_t buttonState) {
@@ -99,29 +102,16 @@ struct Inputs { // convert to namespace and globals?
     Serial.println(data.strip_bounce_score[data.strip_bounce_current_x]);
   }
 
-  static void handle_whack_button(AceButton* button, uint8_t event_type, uint8_t buttonState){
-    if(event_type != AceButton::kEventPressed) return;
-    int whacked_mole = button->getId();
-    if(!data.whack_mole_present[whacked_mole]) return;
-    // whacked!
-    data.whack_mole_present[whacked_mole] = false;
-    output.whack_mole_leds[whacked_mole].off(); // move to output loop?
-    int next = random() % WHACK_MOLE_N - 1;
-    if(next == whacked_mole) next = WHACK_MOLE_N - 1;
-    data.whack_mole_present[next] = true;
-    output.whack_mole_leds[whacked_mole].on(); // move to output loop?
-    data.whack_mole_score += 1;
-  }
-
-
   void setup() {
+    // Strip
     pinMode(PIN::BUTTON, INPUT_PULLUP);
-    hit.getButtonConfig()->setEventHandler(&handle_hit);
+    _hit_config.setEventHandler(&handle_hit);
 
+    // Mole
     for (auto & button : whack_mole_button) {
       pinMode(button.getPin(), INPUT_PULLUP);
-      button.getButtonConfig()->setEventHandler(&handle_whack_button);
     }
+
   }
 
   void loop() {
@@ -224,6 +214,76 @@ struct BuzzerTone: public Coroutine {
     }
   }
 } buzzer_tone;
+
+namespace WhackMole {
+bool whack_mole_present[WHACK_MOLE_N];
+int whack_mole_score;
+enum State {
+  ON,
+  WINNING
+} state = ON;
+constexpr int WINNING_BLINKS_N = 3;
+
+struct WhackMole : public Coroutine {
+  static constexpr int INITIAL_MOLES = 1;
+
+  static void handle_whack_button(AceButton* button, uint8_t event_type, uint8_t buttonState){
+    if(state == WINNING) return;
+    if(event_type != AceButton::kEventPressed) return;
+    int whacked_mole = button->getId();
+    if(!whack_mole_present[whacked_mole]) return;
+    // whacked!
+    set_mole(whacked_mole, false);
+    int next = random() % WHACK_MOLE_N - 1;
+    if(next == whacked_mole) next = WHACK_MOLE_N - 1;
+    set_mole(next);
+    whack_mole_score += 1;
+    if(whack_mole_score > 10)
+      state = WINNING;
+  }
+
+  static void set_mole(int i, bool on=true) {
+    assert(i < WHACK_MOLE_N);
+    whack_mole_present[i] = on;
+    output.whack_mole_leds[i].set(on); // move to output loop?
+  }
+
+
+  void setupCoroutine() override {
+    for(bool & mole : whack_mole_present)
+      mole = false;
+    whack_mole_score = 0;
+    input._whack_mole_config.setEventHandler(&handle_whack_button);
+    for(int i=0; i<INITIAL_MOLES; i++) {
+      int mole = random() % WHACK_MOLE_N;
+      set_mole(mole);
+    }
+  }
+
+  void set_all_whack_leds(bool on = true) {
+    for(auto & l : output.whack_mole_leds)
+      l.set(on); // move to output loop?
+  }
+
+  int winning_blinks = 0;
+
+  int runCoroutine() override {
+    COROUTINE_LOOP() {
+      if(state == WINNING) {
+        for(winning_blinks=0; winning_blinks < WINNING_BLINKS_N; winning_blinks++) {
+          set_all_whack_leds(true);
+          COROUTINE_DELAY_SECONDS(1);
+          set_all_whack_leds(false);
+          COROUTINE_DELAY_SECONDS(1);
+        }
+        state = ON;
+        whack_mole_score = 0;
+      }
+      COROUTINE_DELAY(100); // change to pause / unpause
+    }
+  }
+} whack_mole;
+}
 // Helpers
 
 void dump() {
@@ -235,7 +295,6 @@ void dump() {
 void setup() {
   Serial.begin(9600);
   Serial.println("Alive");
-  data.setup();
   output.setup();
   input.setup();
 
