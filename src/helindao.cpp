@@ -4,8 +4,10 @@
 #include <AceButton.h>
 #include <Melody.h>
 #include <Musician.h>
+
 #include "led.cpp"
 #include "pins.hpp"
+
 
 #define LOG(x) Serial.println((x))
 #define DEBUG(x) LOG(x)
@@ -37,6 +39,8 @@ struct Outputs {
     // constexpr EOrder RGB_ORDER = EOrder::RGB;
     // FastLED.addLeds<LED_MODEL>((CRGB*)matrix, MATRIX_N * MATRIX_N);
     FastLED.addLeds<NEOPIXEL, PIN::LED_STRIP_DATA>((CRGB*)strip, STRIP_N);
+       FastLED.setMaxPowerInVoltsAndMilliamps(5,100); 
+
 
     for(Led & led : whack_mole_leds) led.setup();
   }
@@ -52,8 +56,9 @@ struct Data {
   void setup() = delete; // data needs to be dumb
 
   void dump() {
-    for (int i : strip_bounce_score) {
-      Serial.print("Score"); Serial.println(i);
+    int i=0;
+    for (int s : strip_bounce_score) {
+      Serial.print("Score "); Serial.print(i++); Serial.print(" - "); Serial.println(s);
     }
   }
 
@@ -79,10 +84,10 @@ struct Inputs { // convert to namespace and globals?
   static void handle_hit(AceButton* button, uint8_t event_type, uint8_t buttonState) {
     if(event_type != AceButton::kEventPressed) return;
     data.strip_bounce_score[data.strip_bounce_current_x] += 60;
-    data.buzzer_musician.getMelody()->restart();
-    data.buzzer_musician.stop();
-    data.buzzer_musician.play();
-    data.buzzer_musician.refresh();
+    // data.buzzer_musician.getMelody()->restart();
+    // data.buzzer_musician.stop();
+    // data.buzzer_musician.play();
+    // data.buzzer_musician.refresh();
     Serial.print("HIT: ");
     Serial.print(data.strip_bounce_current_x);
     Serial.print(" -> ");
@@ -147,7 +152,8 @@ COROUTINE(write_outputs) {
   COROUTINE_LOOP() {
     constexpr int FPS = 40;
     constexpr int delay = 1000 / FPS;
-    FastLED.show(10);
+    constexpr float BRIGHTNESS = 0.30;
+    FastLED.show(static_cast<uint8_t>(BRIGHTNESS*255));
     _print_fps();
     COROUTINE_DELAY(delay);
   }
@@ -159,7 +165,7 @@ struct StripBounce : Coroutine {
 
   int runCoroutine() override {
     COROUTINE_LOOP() {
-      constexpr int SPEED = 20,
+      constexpr int SPEED = 10,
         DELAY = 1000 / SPEED,
         HUE_SPEED = 1,
         SATURATION = 200;
@@ -176,7 +182,7 @@ struct StripBounce : Coroutine {
         case output.STRIP_N - 1: direction = -1; break;
       }
       data.strip_bounce_current_x += direction;
-      output.strip[data.strip_bounce_current_x] = CRGB::Red;
+      output.strip[data.strip_bounce_current_x] = CRGB::White;
       COROUTINE_DELAY(DELAY);
     }
   }
