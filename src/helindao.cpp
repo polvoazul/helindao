@@ -5,12 +5,18 @@
 #include <Melody.h>
 #include <Musician.h>
 
+#include "logger.hpp"
 #include "led.cpp"
 #include "pins.hpp"
 
 
 #define LOG(x) Serial.println((x))
 #define DEBUG(x) LOG(x)
+
+#define TOKEN_PASTE(x, y) x##y
+#define CAT(x,y) TOKEN_PASTE(x,y)
+#define UNIQUE_INT CAT(__debug_slow, __LINE__)
+#define DEBUG_SLOW(x) static ulong UNIQUE_INT; if (millis() - UNIQUE_INT > 5000) {LOG(x); UNIQUE_INT = millis();}
 
 constexpr bool PROFILE = false;
 
@@ -28,39 +34,21 @@ constexpr uint8_t
 
 // OUTPUTS
 struct Outputs {
-  static constexpr int STRIP_N = 29;
-  static constexpr int MATRIX_N = 8;
-  // CRGB matrix[MATRIX_N][MATRIX_N];
-  CRGB strip[STRIP_N];
   Led whack_mole_leds[3] = {PIN::WHACK_MOLE_LED1, PIN::WHACK_MOLE_LED2, PIN::WHACK_MOLE_LED3};
 
   void setup() {
     // Setup Leds array
-    // constexpr EOrder RGB_ORDER = EOrder::RGB;
-    // FastLED.addLeds<LED_MODEL>((CRGB*)matrix, MATRIX_N * MATRIX_N);
-    FastLED.addLeds<NEOPIXEL, PIN::LED_STRIP_DATA>((CRGB*)strip, STRIP_N);
-       FastLED.setMaxPowerInVoltsAndMilliamps(5,100); 
-
-
     for(Led & led : whack_mole_leds) led.setup();
   }
 } output;
 
 // DATA
 struct Data {
-  uint8_t strip_bounce_score[output.STRIP_N] = {};
-  uint8_t strip_bounce_current_x = 0;
   Musician buzzer_musician = Musician( PIN::BUZZER, LEDC_CHANNEL_BUZZER );
 
 
   void setup() = delete; // data needs to be dumb
 
-  void dump() {
-    int i=0;
-    for (int s : strip_bounce_score) {
-      Serial.print("Score "); Serial.print(i++); Serial.print(" - "); Serial.println(s);
-    }
-  }
 
 } data;
 
@@ -69,35 +57,19 @@ struct Data {
 // INPUTS
 
 struct Inputs { // convert to namespace and globals?
-  ButtonConfig _hit_config, _whack_mole_config;
-  AceButton hit;
+  ButtonConfig _whack_mole_config;
   AceButton whack_mole_button[3];
 
-  Inputs():
-    hit(&_hit_config, PIN::HIT_BUTTON, HIGH, 0)
+  Inputs()
   {
     whack_mole_button[0].init(&_whack_mole_config, PIN::WHACK_MOLE_BUTTON1, HIGH, 0);
     whack_mole_button[1].init(&_whack_mole_config, PIN::WHACK_MOLE_BUTTON2, HIGH, 1);
     whack_mole_button[2].init(&_whack_mole_config, PIN::WHACK_MOLE_BUTTON3, HIGH, 2);
   }
 
-  static void handle_hit(AceButton* button, uint8_t event_type, uint8_t buttonState) {
-    if(event_type != AceButton::kEventPressed) return;
-    data.strip_bounce_score[data.strip_bounce_current_x] += 60;
-    // data.buzzer_musician.getMelody()->restart();
-    // data.buzzer_musician.stop();
-    // data.buzzer_musician.play();
-    // data.buzzer_musician.refresh();
-    Serial.print("HIT: ");
-    Serial.print(data.strip_bounce_current_x);
-    Serial.print(" -> ");
-    Serial.println(data.strip_bounce_score[data.strip_bounce_current_x]);
-  }
 
   void setup() {
     // Strip
-    pinMode(PIN::HIT_BUTTON, INPUT_PULLUP);
-    _hit_config.setEventHandler(&handle_hit);
 
     // Mole
     for (auto & button : whack_mole_button) {
@@ -107,7 +79,6 @@ struct Inputs { // convert to namespace and globals?
   }
 
   void loop() {
-    hit.check();
     for (auto &button: whack_mole_button)
       button.check();
   }
@@ -117,11 +88,6 @@ struct Inputs { // convert to namespace and globals?
 
 // Helpers
 namespace {
-
-
-void dump() {
-  data.dump();
-}
 
 
 inline void _print_fps() {
@@ -137,7 +103,11 @@ inline void _print_fps() {
     frames_since_last_second = 0;
 }
 
+constexpr uint8_t Brightness(float b) {return static_cast<uint8_t>(b*255);}
+
 }
+
+
 
 ////////////// COROUTINES ////////////////
 
@@ -148,66 +118,107 @@ COROUTINE(read_inputs) {
   }
 }
 
-COROUTINE(write_outputs) {
-  COROUTINE_LOOP() {
-    constexpr int FPS = 40;
-    constexpr int delay = 1000 / FPS;
-    constexpr float BRIGHTNESS = 0.30;
-    FastLED.show(static_cast<uint8_t>(BRIGHTNESS*255));
-    _print_fps();
-    COROUTINE_DELAY(delay);
-  }
-}
-
-namespace StripBounce {
-struct StripBounce : Coroutine {
-  void setupCoroutine() override { }
-
-  int runCoroutine() override {
-    COROUTINE_LOOP() {
-      constexpr int SPEED = 10,
-        DELAY = 1000 / SPEED,
-        HUE_SPEED = 1,
-        SATURATION = 200;
-      constexpr uint8_t SCORE_DECAY = 3;
-      static int8_t direction = 1;
-      static uint8_t hue = 0;
-
-      hue += HUE_SPEED;
-      auto *score = &data.strip_bounce_score[data.strip_bounce_current_x];
-      output.strip[data.strip_bounce_current_x].setHSV(hue, SATURATION, *score);
-      *score = *score > SCORE_DECAY ? *score - SCORE_DECAY : 0;
-      switch (data.strip_bounce_current_x) {
-        case 0: direction = 1; break;
-        case output.STRIP_N - 1: direction = -1; break;
-      }
-      data.strip_bounce_current_x += direction;
-      output.strip[data.strip_bounce_current_x] = CRGB::White;
-      COROUTINE_DELAY(DELAY);
-    }
-  }
-} strip_bounce;
-}
-
-namespace simple_blinker {
-Led onboard_led {PIN::HEALTH_CHECK_LED};
-class SimpleBlinker : Coroutine {
+namespace HealthCheckLed {
+Led onboard_led = Led{PIN::HEALTH_CHECK_LED};
+class HealthCheckLed : Coroutine {
   int runCoroutine() override {
     COROUTINE_LOOP() {
       onboard_led.toggle();
       COROUTINE_DELAY(500);
-      DEBUG("HealthCheck");
+      DEBUG_SLOW("HealthCheck");
     }
   }
   
   void setupCoroutine() override {
     onboard_led.setup();
+    setName("health_check_led");
   }
-} simple_blinker;
+} health_check_led;
+}
+
+namespace LedMatrix {
+  #include "./matrix_images/8x8_characters.cpp"
+  constexpr int FPS = 40;
+  constexpr int delay = 1000 / FPS;
+  constexpr auto BRIGHTNESS = Brightness(0.05);
+  static constexpr int MATRIX_N = 8;
+  CRGB matrix[MATRIX_N][MATRIX_N];
+  CLEDController *controller;
+  bool refresh_needed = true;
+
+  struct LedMatrix : public Coroutine {
+
+  void setupCoroutine() override {
+    setName("led_matrix");
+    controller = &FastLED.addLeds<NEOPIXEL, PIN::MATRIX_LED_DATA>((CRGB*)matrix, MATRIX_N*MATRIX_N);
+  }
+
+  int runCoroutine() override {
+    COROUTINE_BEGIN();
+    COROUTINE_DELAY_SECONDS(5);
+    DEBUG("Running Matrix");
+    while(true) {
+      if(refresh_needed) {
+        controller->showLeds(BRIGHTNESS);
+        refresh_needed = false;
+      }
+      COROUTINE_DELAY(delay);
+    }
+  }
+  
+  } led_matrix;
+
+  COROUTINE(SwapImage) {
+    constexpr int SWAP_IMAGE_TIME_SECONDS = 15;
+    COROUTINE_LOOP() {
+      const int next_image = 0;// random() % 100; // N_IMAGES = 100
+      const unsigned char (&image)[8][8][3] = images8x8_characters[next_image];
+      for (int y=0; y<8; ++y) {  // OPT: Copy memory in chunks
+        for (int x=0; x<8; ++x) {
+          matrix[y][x] = CRGB{image[y][x][0], image[y][x][1], image[y][x][2]};
+        }
+      }
+      DEBUG("Image chosen: "); 
+      DEBUG(next_image); 
+      refresh_needed = true;
+      COROUTINE_DELAY_SECONDS(SWAP_IMAGE_TIME_SECONDS);
+    }
+  }
+}
+
+
+
+
+COROUTINE(printProfiling) {
+  COROUTINE_LOOP() {
+    if(!PROFILE) {
+      COROUTINE_END();
+    }
+    LogBinTableRenderer::printTo(
+        Serial, 3 /*startBin*/, 14 /*endBin*/, false /*clear*/);
+    COROUTINE_DELAY(10000);
+  }
 }
 
 // #include "whack_mole.hpp"
 // #include "buzzer.hpp"
+#include "./strip_bounce.hpp"
+
+// END COROUTINES
+
+
+
+void dump() {
+  StripBounce::dump();
+}
+
+
+void set_coroutine_names() {
+  read_inputs.setName("read_inputs"); StripBounce::show_leds.setName("strip_show_leds");
+  printProfiling.setName("print_profiling"); LedMatrix::SwapImage.setName("swap_image");
+}
+
+
 
 // Arduino CODE
 
@@ -233,7 +244,7 @@ void setup() {
   output.setup();
   input.setup();
 
-
+  set_coroutine_names();
   CoroutineScheduler::setup();
   CoroutineScheduler::setupCoroutines();
   if(PROFILE)
