@@ -5,18 +5,15 @@
 #include <Melody.h>
 #include <Musician.h>
 
+#define DEBUGGING 1
 #include "logger.hpp"
+
 #include "led.cpp"
 #include "pins.hpp"
+#include "coroutines.hpp"
 
 
-#define LOG(x) Serial.println((x))
-#define DEBUG(x) LOG(x)
 
-#define TOKEN_PASTE(x, y) x##y
-#define CAT(x,y) TOKEN_PASTE(x,y)
-#define UNIQUE_INT CAT(__debug_slow, __LINE__)
-#define DEBUG_SLOW(x) static ulong UNIQUE_INT; if (millis() - UNIQUE_INT > 5000) {LOG(x); UNIQUE_INT = millis();}
 
 constexpr bool PROFILE = false;
 
@@ -103,8 +100,6 @@ inline void _print_fps() {
     frames_since_last_second = 0;
 }
 
-constexpr uint8_t Brightness(float b) {return static_cast<uint8_t>(b*255);}
-
 }
 
 
@@ -136,55 +131,6 @@ class HealthCheckLed : Coroutine {
 } health_check_led;
 }
 
-namespace LedMatrix {
-  #include "./matrix_images/8x8_characters.cpp"
-  constexpr int FPS = 40;
-  constexpr int delay = 1000 / FPS;
-  constexpr auto BRIGHTNESS = Brightness(0.05);
-  static constexpr int MATRIX_N = 8;
-  CRGB matrix[MATRIX_N][MATRIX_N];
-  CLEDController *controller;
-  bool refresh_needed = true;
-
-  struct LedMatrix : public Coroutine {
-
-  void setupCoroutine() override {
-    setName("led_matrix");
-    controller = &FastLED.addLeds<NEOPIXEL, PIN::MATRIX_LED_DATA>((CRGB*)matrix, MATRIX_N*MATRIX_N);
-  }
-
-  int runCoroutine() override {
-    COROUTINE_BEGIN();
-    COROUTINE_DELAY_SECONDS(5);
-    DEBUG("Running Matrix");
-    while(true) {
-      if(refresh_needed) {
-        controller->showLeds(BRIGHTNESS);
-        refresh_needed = false;
-      }
-      COROUTINE_DELAY(delay);
-    }
-  }
-  
-  } led_matrix;
-
-  COROUTINE(SwapImage) {
-    constexpr int SWAP_IMAGE_TIME_SECONDS = 15;
-    COROUTINE_LOOP() {
-      const int next_image = 0;// random() % 100; // N_IMAGES = 100
-      const unsigned char (&image)[8][8][3] = images8x8_characters[next_image];
-      for (int y=0; y<8; ++y) {  // OPT: Copy memory in chunks
-        for (int x=0; x<8; ++x) {
-          matrix[y][x] = CRGB{image[y][x][0], image[y][x][1], image[y][x][2]};
-        }
-      }
-      DEBUG("Image chosen: "); 
-      DEBUG(next_image); 
-      refresh_needed = true;
-      COROUTINE_DELAY_SECONDS(SWAP_IMAGE_TIME_SECONDS);
-    }
-  }
-}
 
 
 
@@ -202,6 +148,7 @@ COROUTINE(printProfiling) {
 
 // #include "whack_mole.hpp"
 // #include "buzzer.hpp"
+// #include "led_matrix.hpp"
 #include "./strip_bounce.hpp"
 
 // END COROUTINES
@@ -214,8 +161,10 @@ void dump() {
 
 
 void set_coroutine_names() {
+  #ifdef DEBUGGING
   read_inputs.setName("read_inputs"); StripBounce::show_leds.setName("strip_show_leds");
-  printProfiling.setName("print_profiling"); LedMatrix::SwapImage.setName("swap_image");
+  printProfiling.setName("print_profiling");
+  #endif
 }
 
 
@@ -231,7 +180,7 @@ constexpr long MILLION = 1000000;
 
 void _light_sleep() {
   DEBUG("Sleeping..."); delay(10);
-  esp_sleep_enable_timer_wakeup(1 * MILLION);
+  esp_sleep_enable_timer_wakeup(5 * MILLION);
   DEBUG(esp_light_sleep_start());
   DEBUG("Woke!");
 }
