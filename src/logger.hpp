@@ -35,7 +35,3 @@ struct __StreamableArr {
 
 
 #define ARR(arr) __StreamableArr<typeof(arr)>(arr)
-
-/////////////////// UTILS /////////////////////////
-
-constexpr uint8_t Brightness(float b) {return static_cast<uint8_t>(b*255);}

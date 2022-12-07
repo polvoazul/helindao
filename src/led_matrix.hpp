@@ -1,16 +1,18 @@
 #include <Arduino.h>
 #include <FastLED.h>
 #include <AceButton.h>
+#include <Preferences.h>
 
 #include "pins.hpp"
 #include "logger.hpp"
 #include "coroutines.hpp"
+#include "utils.hpp"
+
+#define HELINDAO_LEDMATRIX
 
 namespace LedMatrix {
   #include "./matrix_images/8x8_characters.cpp"
-  constexpr int FPS = 40;
-  constexpr int delay = 1000 / FPS;
-  constexpr auto BRIGHTNESS = Brightness(0.05);
+  const auto & BRIGHTNESS = preferences.lm_brightness;
   static constexpr int MATRIX_N = 8;
   CRGB matrix[MATRIX_N][MATRIX_N];
   CLEDController *controller;
@@ -25,21 +27,6 @@ namespace LedMatrix {
   }
 
   int runCoroutine() override {
-    COROUTINE_BEGIN();
-    COROUTINE_DELAY_SECONDS(5);
-    DEBUG("Running Matrix");
-    while(true) {
-      if(refresh_needed) {
-        controller->showLeds(BRIGHTNESS);
-        refresh_needed = false;
-      }
-      COROUTINE_DELAY(delay);
-    }
-  }
-  
-  } led_matrix;
-
-  COROUTINE(SwapImage) {
     constexpr int SWAP_IMAGE_TIME_SECONDS = 15;
     COROUTINE_LOOP() {
       const int next_image = 0;// random() % 100; // N_IMAGES = 100
@@ -55,6 +42,8 @@ namespace LedMatrix {
       COROUTINE_DELAY_SECONDS(SWAP_IMAGE_TIME_SECONDS);
     }
   }
-  // int Coroutine_SwapImage::setupCoroutine() {setName("swap_image");}
+  
+  } led_matrix;
+
 
 }

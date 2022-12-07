@@ -1,11 +1,19 @@
+#include <String>
 #include <Arduino.h>
+
+#define NO_DITHERING 1
 #include <FastLED.h>
+#undef NO_DITHERING
+
 #include <AceRoutine.h>
 #include <AceButton.h>
 #include <Melody.h>
 #include <Musician.h>
+#include <Preferences.h>
 
 #define DEBUGGING 1
+
+#include "utils.hpp"
 #include "logger.hpp"
 
 #include "led.cpp"
@@ -21,7 +29,6 @@ constexpr bool PROFILE = false;
 using ace_routine::CoroutineScheduler;
 using namespace ace_button;
 using namespace ace_routine;
-
 
 
 
@@ -87,18 +94,6 @@ struct Inputs { // convert to namespace and globals?
 namespace {
 
 
-inline void _print_fps() {
-    static int last_second = 0;
-    static int frames_since_last_second = 0;
-
-    ++frames_since_last_second;
-    int now = millis() / 1000;
-    if (now == last_second) return;
-    Serial.print("FPS: ");
-    Serial.println(frames_since_last_second);
-    last_second = now;
-    frames_since_last_second = 0;
-}
 
 }
 
@@ -148,8 +143,11 @@ COROUTINE(printProfiling) {
 
 // #include "whack_mole.hpp"
 // #include "buzzer.hpp"
-// #include "led_matrix.hpp"
-#include "./strip_bounce.hpp"
+ #include "led_matrix.hpp"
+
+#include "strip_bounce.hpp"
+
+#include "led_control.hpp"
 
 // END COROUTINES
 
@@ -162,9 +160,21 @@ void dump() {
 
 void set_coroutine_names() {
   #ifdef DEBUGGING
-  read_inputs.setName("read_inputs"); StripBounce::show_leds.setName("strip_show_leds");
+  read_inputs.setName("read_inputs"); StripBounce::strip_bounce.setName("strip_show_leds");
   printProfiling.setName("print_profiling");
   #endif
+}
+
+void treat_serial() {
+  String input = Serial.readStringUntil('\n');
+  switch(input[0]) {
+  case('!'):
+    preferences.write(input.substring(1)); break;
+  case('D'):
+    dump(); break;
+  default:
+    Serial << "Valid commands are '!' 'D' . " << endl;
+  }
 }
 
 
@@ -192,6 +202,7 @@ void setup() {
   // _light_sleep();
   output.setup();
   input.setup();
+  preferences.setup();
 
   set_coroutine_names();
   CoroutineScheduler::setup();
@@ -206,8 +217,7 @@ void loop() {
   else
     CoroutineScheduler::loop();
   if (Serial.available() > 0) {  
-    while (Serial.available()) Serial.read();
-    dump();
+    treat_serial();
   }
 }
 
