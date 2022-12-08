@@ -47,14 +47,15 @@ namespace LedMatrix {
     }
   }
 
+  const L::bit8x8 *letter;
   int iterateLetters() {
-    constexpr int DELAY = 5000;
+    constexpr int DELAY = 2000;
     COROUTINE_LOOP() {
       static const String word = "helio";
       for (i=0; i<word.length(); i++){
-        const L::bit8x8 & letter = L::get_letter(word[i]);
+        letter = &L::get_letter(word[i]);
         for (j=0; j<(DELAY/(1000/25)); j++) { // repaint the same letter
-          paint_letter(L::a, &set);
+          paint_letter(*letter, &set);
           refresh_needed = true;
           COROUTINE_DELAY(1000/25);
         }

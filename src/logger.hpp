@@ -28,7 +28,7 @@ struct __StreamableArr {
 
  friend Print& operator<<(Print& s, const __StreamableArr<T>& arr) {
   for (auto &el : arr.array)
-    s << el;
+    s << el << ", ";
   return s;
  }
 };
