@@ -8,7 +8,7 @@ uint8_t Brightness(float b) {return static_cast<uint8_t>(b*255);}
 
 struct Pref : Preferences {
   // Define prefs here, with defaults
-  float lm_brightness = 0.2,
+  float lm_brightness = 0.15,
       sb_brightness = 0.2;
   int sb_speed = 10;
 
@@ -32,7 +32,7 @@ struct Pref : Preferences {
     #define SET(k, t) if(key == #k) { \
           t value = value_s.to##t(); \
           put##t(key.c_str(), value);  \
-          Serial << "Set " << key << "to " << value << endl; \
+          Serial << "Set !" << key << " = " << value << endl; \
            restart(); \
           } else
     SET(lm_brightness, Float)

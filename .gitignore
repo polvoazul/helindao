@@ -5,3 +5,5 @@
 .vscode/ipch
 .ipynb_checkpoints
 *.swp
+__pycache__
+.DS_Store

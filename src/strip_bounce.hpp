@@ -8,6 +8,8 @@
 #include "coroutines.hpp"
 #include "utils.hpp"
 
+#define HELINDAO_STRIP_BOUNCE
+
 Print &operator<<(Print &s, CRGB const &rgb) { return s << "(" << rgb.r << ", " << rgb.g << ", " << rgb.g << ")";}
 
 namespace StripBounce {

@@ -8,12 +8,12 @@
 inline void _print_fps() {
     static int last_second = 0;
     static int frames_since_last_second = 0;
+    constexpr int CALCULATE_EACH = 5;
 
     ++frames_since_last_second;
-    int now = millis() / 1000;
+    int now = millis() / (1000 * CALCULATE_EACH);
     if (now == last_second) return;
-    Serial.print("FPS: ");
-    Serial.println(frames_since_last_second);
+    DEBUG << "FPS: " << frames_since_last_second / ((float)CALCULATE_EACH) << endl;
     last_second = now;
     frames_since_last_second = 0;
 }
@@ -25,15 +25,19 @@ COROUTINE(show_leds) {
     assert(StripBounce::SPEED < FPS);
     constexpr int delay = 1000 / FPS;
     _print_fps();
-    if(
-      StripBounce::refresh_needed
-      #ifdef HELINDAO_LEDMATRIX
+    if( false
+      #ifdef HELINDAO_STRIP_BOUNCE
+      || StripBounce::refresh_needed
+      #endif
+      #ifdef HELINDAO_LED_MATRIX
       || LedMatrix::refresh_needed
       #endif
       ) {
+      #ifdef HELINDAO_STRIP_BOUNCE
       StripBounce::controller->showLeds(Brightness(StripBounce::BRIGHTNESS));
       StripBounce::refresh_needed = false;
-      #ifdef HELINDAO_LEDMATRIX
+      #endif
+      #ifdef HELINDAO_LED_MATRIX
       LedMatrix::controller->showLeds(Brightness(LedMatrix::BRIGHTNESS));
       LedMatrix::refresh_needed = false;
       #endif
