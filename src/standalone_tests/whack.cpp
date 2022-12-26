@@ -2,7 +2,7 @@
 #include <AceButton.h>
 
 #define DEBUGGING 1
-#define HELINDAO_SERIAL_BUTTON_DEBUG_SLOW 1
+// #define HELINDAO_SERIAL_BUTTON_DEBUG_SLOW 1
 
 #include "pins.hpp"
 #include "serial_button.hpp"
@@ -77,6 +77,7 @@ void _clear() {
   for(int i=0; i<WHACK_MOLE_N; ++i)
     serial_output.set(i, LOW);
 }
+
 void loop() {
   delay(5);
   if (Serial.available() != 0) {
@@ -84,18 +85,28 @@ void loop() {
     Serial << string;
     char s = string[0];
     switch (s) {
-      case '1': _clear(); serial_output.set(0, HIGH); break;
-      case '2': _clear(); serial_output.set(1, HIGH); break;
-      case '3': _clear(); serial_output.set(2, HIGH); break;
-      case '4': _clear(); serial_output.set(3, HIGH); break;
-      case '5': _clear(); serial_output.set(4, HIGH); break;
-      case '6': _clear(); serial_output.set(5, HIGH); break;
-      case 'p': Serial << ARR(button_config.last_reading) << endl; break;
+      case '1': _clear(); serial_output.set(0, HIGH); serial_output.write(); break;
+      case '2': _clear(); serial_output.set(1, HIGH); serial_output.write(); break;
+      case '3': _clear(); serial_output.set(2, HIGH); serial_output.write(); break;
+      case '4': _clear(); serial_output.set(3, HIGH); serial_output.write(); break;
+      case '5': _clear(); serial_output.set(4, HIGH); serial_output.write(); break;
+      case '6': _clear(); serial_output.set(5, HIGH); serial_output.write(); break;
       case 'a': digitalWrite(PIN::WHACK_MOLE_DL_CB, LOW); break;
       case 'A': digitalWrite(PIN::WHACK_MOLE_DL_CB, HIGH); break;
+      case 'Q': button_config.refresh(); __attribute__ ((fallthrough));
+      case 'p':
+        Serial << ARR(button_config.last_reading) << endl;
+        Serial << "State of clock led: " << digitalRead(PIN::WHACK_MOLE_CL) << endl;
+        break;
+      case 'q': 
+        digitalWrite(PIN::WHACK_MOLE_DL_CB, LOW); digitalWrite(PIN::WHACK_MOLE_DL_CB, HIGH); 
+        Serial << "Read " << digitalRead(PIN::WHACK_MOLE_DB) << endl;
+        break;
+      case 'W': for(int i=0; i<1000; ++i) digitalWrite(PIN::WHACK_MOLE_DL_CB, i%2); break;
+      case 'E': for(int i=0; i<1000; ++i) digitalWrite(PIN::WHACK_MOLE_LB, i%2); break;
       case 'b': digitalWrite(PIN::WHACK_MOLE_CL, LOW); break;
       case 'B': digitalWrite(PIN::WHACK_MOLE_CL, HIGH); break;
-      case 'c': digitalWrite(PIN::WHACK_MOLE_LB, LOW); break;
+      case 'c': digitalWrite(PIN::WHACK_MOLE_LB, LOW); break; // load on low
       case 'C': digitalWrite(PIN::WHACK_MOLE_LB, HIGH); break;
       case 'd': Serial << "Read " << digitalRead(PIN::WHACK_MOLE_DB) << endl; break;
       default: LOG("CRAP!");

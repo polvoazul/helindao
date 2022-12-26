@@ -2,10 +2,13 @@
 #include <Arduino.h>
 #include <AceButton.h>
 
+// https://www.ti.com/lit/ds/symlink/sn74hc165.pdf?ts=1671963731056&ref_url=https%253A%252F%252Fwww.google.com%252F
+
+constexpr uint8_t SerialButton_MAP[8] = {5,3,2,0,4,1,6,7};
 template <int NUMBER_OF_BUTTONS>
 struct SerialButton : ace_button::ButtonConfig {
   bool last_reading[NUMBER_OF_BUTTONS];
-  uint8_t load_pin, data_pin, clock_pin;
+  const uint8_t load_pin, data_pin, clock_pin;
 
   SerialButton(uint8_t load_pin, uint8_t data_pin, uint8_t clock_pin) :
       load_pin(load_pin), data_pin(data_pin), clock_pin(clock_pin) {
@@ -24,12 +27,13 @@ struct SerialButton : ace_button::ButtonConfig {
   // Need to call this to refresh whole button array state. Always call before calling readButton (button.check())
   void refresh() { 
     digitalWrite(load_pin, LOW);  // Load pin is inverted, it loads on LOW
-    digitalWrite(clock_pin, HIGH);
+    delayMicroseconds(3);
     digitalWrite(load_pin, HIGH);
     digitalWrite(clock_pin, LOW);
-    for(int i=0; i<NUMBER_OF_BUTTONS; i++) {
+    for(int i=8-1; i>=0; i--) {
+      if(i<NUMBER_OF_BUTTONS)
+        last_reading[SerialButton_MAP[i]] = digitalRead(data_pin);
       digitalWrite(clock_pin, HIGH);
-      last_reading[i] = digitalRead(data_pin);
       digitalWrite(clock_pin, LOW);
     }
   }
@@ -40,6 +44,8 @@ struct SerialButton : ace_button::ButtonConfig {
     return last_reading[pin];
   }
 };
+
+constexpr uint8_t SerialOutput_MAP[8] = {4,3,5,0,1,2,6,7};
 
 template <uint NUMBER_OF_OUTPUTS>
 struct SerialOutput {
@@ -67,15 +73,17 @@ struct SerialOutput {
   // Flush values to hardware.
   void write() {
     if(!refresh_needed) return;
-    digitalWrite(clock_pin, LOW);
-    for(int i=0; i<NUMBER_OF_OUTPUTS; i++) {
-      digitalWrite(data_pin, outputs[i]);
-      digitalWrite(clock_pin, HIGH);
+    for(int i=NUMBER_OF_OUTPUTS - 1; i>=0; i--) {
+      digitalWrite(data_pin, outputs[SerialOutput_MAP[i]]);
       digitalWrite(clock_pin, LOW);
+      delayMicroseconds(1);
+      digitalWrite(clock_pin, HIGH);
+      delayMicroseconds(1);
       #ifdef HELINDAO_SERIAL_BUTTON_DEBUG_SLOW
-      delay(1000);
+      delay(300);
       #endif
     }
+    digitalWrite(data_pin, LOW);
     refresh_needed = false;
   }
 };
