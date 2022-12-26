@@ -23,7 +23,7 @@
 
 template <typename T>
 struct __StreamableArr {
-  T (&array);
+  T & array;
   __StreamableArr(T &arr): array(arr) {}
 
  friend Print& operator<<(Print& s, const __StreamableArr<T>& arr) {

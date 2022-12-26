@@ -15,11 +15,11 @@
 
 #include "utils.hpp"
 #include "logger.hpp"
-
 #include "led.cpp"
 #include "pins.hpp"
 #include "coroutines.hpp"
 
+#include "serial_button.hpp"
 
 
 
@@ -33,18 +33,9 @@ using namespace ace_routine;
 
 
 constexpr uint8_t
-  LEDC_CHANNEL_BUZZER = 0,
-  WHACK_MOLE_N = 3;
+  LEDC_CHANNEL_BUZZER = 0;
 
 // OUTPUTS
-struct Outputs {
-  Led whack_mole_leds[3] = {PIN::WHACK_MOLE_LED1, PIN::WHACK_MOLE_LED2, PIN::WHACK_MOLE_LED3};
-
-  void setup() {
-    // Setup Leds array
-    for(Led & led : whack_mole_leds) led.setup();
-  }
-} output;
 
 // DATA
 struct Data {
@@ -61,32 +52,11 @@ struct Data {
 // INPUTS
 
 struct Inputs { // convert to namespace and globals?
-  ButtonConfig _whack_mole_config;
-  AceButton whack_mole_button[3];
-
-  Inputs()
-  {
-    whack_mole_button[0].init(&_whack_mole_config, PIN::WHACK_MOLE_BUTTON1, HIGH, 0);
-    whack_mole_button[1].init(&_whack_mole_config, PIN::WHACK_MOLE_BUTTON2, HIGH, 1);
-    whack_mole_button[2].init(&_whack_mole_config, PIN::WHACK_MOLE_BUTTON3, HIGH, 2);
-  }
-
-
+  // bool _m;
   void setup() {
-    // Strip
-
-    // Mole
-    for (auto & button : whack_mole_button) {
-      pinMode(button.getPin(), INPUT_PULLUP);
-    }
-
   }
-
   void loop() {
-    for (auto &button: whack_mole_button)
-      button.check();
   }
-
 } input;
 
 
@@ -141,7 +111,7 @@ COROUTINE(printProfiling) {
   }
 }
 
-// #include "whack_mole.hpp"
+#include "whack_mole.hpp"
 // #include "buzzer.hpp"
  #include "led_matrix.hpp"
 
@@ -200,7 +170,6 @@ void setup() {
   Serial.println("Alive");
   delay(500);  // Maybe this helps upload success on boot?
   // _light_sleep();
-  output.setup();
   input.setup();
   preferences.setup();
 

@@ -4,7 +4,7 @@
 namespace L {
 typedef ::byte bit8x8[8]; 
 
-const bit8x8 a={B00111100,
+const bit8x8 a={ B00111100,
                  B01000010,
                  B01000010,
                  B01111110,
@@ -12,7 +12,7 @@ const bit8x8 a={B00111100,
                  B01000010,
                  B01000010,
                  B01000010};
-const bit8x8 b={B01111100,
+const bit8x8 b={ B01111100,
                  B01000010,
                  B01000010,
                  B01111100,
@@ -89,7 +89,7 @@ inline CHSV background() {
 }
 
 void paint_letter(const L::bit8x8 &letter, CRGB& set(int, int)) {
-  auto foreground = CRGB::Green;
+  auto foreground = CRGB::White;
   for (int j=0; j< 8; j++)
     for (int i=0; i< 8; i++) {
       if(letter[j] & ( 1 << (7-i)))
