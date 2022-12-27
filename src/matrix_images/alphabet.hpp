@@ -89,7 +89,7 @@ inline CHSV background() {
 }
 
 void paint_letter(const L::bit8x8 &letter, CRGB& set(int, int)) {
-  auto foreground = CRGB::White;
+  auto foreground = CRGB::Red;
   for (int j=0; j< 8; j++)
     for (int i=0; i< 8; i++) {
       if(letter[j] & ( 1 << (7-i)))

@@ -111,12 +111,10 @@ COROUTINE(printProfiling) {
   }
 }
 
-#include "whack_mole.hpp"
 // #include "buzzer.hpp"
- #include "led_matrix.hpp"
-
+#include "whack_mole.hpp"
+#include "led_matrix.hpp"
 #include "strip_bounce.hpp"
-
 #include "led_control.hpp"
 
 // END COROUTINES
@@ -124,13 +122,13 @@ COROUTINE(printProfiling) {
 
 
 void dump() {
-  StripBounce::dump();
 }
 
 
 void set_coroutine_names() {
   #ifdef DEBUGGING
-  read_inputs.setName("read_inputs"); StripBounce::strip_bounce.setName("strip_show_leds");
+  read_inputs.setName("read_inputs");
+  // StripBounce::strip_bounce.setName("strip_show_leds");
   printProfiling.setName("print_profiling");
   #endif
 }
@@ -142,8 +140,13 @@ void treat_serial() {
     preferences.write(input.substring(1)); break;
   case('D'):
     dump(); break;
+  case('W'):
+    Serial << "Moles:" << ARR(WhackMole::mole_present) << endl;
+    WhackMole::button_config.refresh();
+    Serial << ARR(WhackMole::button_config.last_reading) << endl;
+    break;
   default:
-    Serial << "Valid commands are '!' 'D' . " << endl;
+    Serial << "Valid commands are '!' 'D' 'W' . " << endl;
   }
 }
 
@@ -178,6 +181,7 @@ void setup() {
   CoroutineScheduler::setupCoroutines();
   if(PROFILE)
     LogBinProfiler::createProfilers();
+  randomSeed(micros());
 }
 
 void loop() {

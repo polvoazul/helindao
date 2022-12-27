@@ -28,8 +28,8 @@ namespace LedMatrix {
   }
 
   int runCoroutine() override {
-    return ball_bounce();
-    return swap_image();
+    // return ball_bounce();
+    // return swap_image();
     return iterateLetters();
   }
 
