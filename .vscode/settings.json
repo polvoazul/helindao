@@ -1,6 +1,11 @@
 {
   "C_Cpp.errorSquiggles": "enabled",
   "files.associations": {
-    "*.tcc": "cpp"
+    "*.tcc": "cpp",
+    "cstdlib": "cpp",
+    "array": "cpp",
+    "algorithm": "cpp",
+    "random": "cpp",
+    "numeric": "cpp"
   }
 }

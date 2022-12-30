@@ -19,7 +19,7 @@ namespace LedMatrix {
   CLEDController *controller;
   bool refresh_needed = true;
 
-  struct LedMatrix : public Coroutine {
+  struct LedMatrix : public BaseCoroutine {
 
   void setupCoroutine() override {
     setName("led_matrix");

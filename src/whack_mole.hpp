@@ -45,20 +45,25 @@ void flush_leds() {
 
 void handle_whack_button(AceButton* button, uint8_t event_type, uint8_t buttonState){
   Serial << "Pressed button: " << button->getId() << endl;
+  flush_leds(); // Just to make sure leds are ok, as noise is putting them off
   if(state == WINNING) return;
   if(event_type != AceButton::kEventPressed) return;
   int whacked_mole = button->getId();
-  if(!mole_present[whacked_mole]) return;
+  if(!mole_present[whacked_mole])
+    return;
+  score += 1;
   Serial << "Whacked! Score: " << score << endl;
+  if(score >= 7) {
+    state = WINNING;
+    return;
+  }
+  Buzzer::play(Buzzer::Sound::effect_valid);
   uint8_t next;
   do {
     next = random(0, WHACK_MOLE_N);
   } while(mole_present[next]);
   set_mole(whacked_mole, false);
   set_mole(next, true);
-  score += 1;
-  if(score > 10)
-    state = WINNING;
   flush_leds();
 }
 
@@ -102,6 +107,7 @@ struct WhackMole : public ace_routine::Coroutine {
       COROUTINE_DELAY(5);
       break;
     case State::WINNING:
+      Buzzer::play(Buzzer::Sound::melody1);
       for(winning_blinks=0; winning_blinks < WINNING_BLINKS_N; winning_blinks++) {
         set_all_whack_leds(true);
         COROUTINE_DELAY(500);

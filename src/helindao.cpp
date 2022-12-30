@@ -10,6 +10,8 @@
 #include <Melody.h>
 #include <Musician.h>
 #include <Preferences.h>
+#include <bootloader_random.h>
+
 
 #define DEBUGGING 1
 
@@ -32,14 +34,11 @@ using namespace ace_routine;
 
 
 
-constexpr uint8_t
-  LEDC_CHANNEL_BUZZER = 0;
 
 // OUTPUTS
 
 // DATA
 struct Data {
-  Musician buzzer_musician = Musician( PIN::BUZZER, LEDC_CHANNEL_BUZZER );
 
 
   void setup() = delete; // data needs to be dumb
@@ -111,7 +110,7 @@ COROUTINE(printProfiling) {
   }
 }
 
-// #include "buzzer.hpp"
+// #include "buzzer.hpp" - First drive buzzer with a mosfet! Not directly from pin
 #include "whack_mole.hpp"
 #include "led_matrix.hpp"
 #include "strip_bounce.hpp"
@@ -181,7 +180,10 @@ void setup() {
   CoroutineScheduler::setupCoroutines();
   if(PROFILE)
     LogBinProfiler::createProfilers();
-  randomSeed(micros());
+  
+  bootloader_random_enable();
+  randomSeed(esp_random());
+  bootloader_random_disable();
 }
 
 void loop() {

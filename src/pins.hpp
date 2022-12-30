@@ -46,6 +46,13 @@ uint8_t constexpr
 */
   __END__ = 99
 ;
-}
+
+// LEDC Channels
+namespace LEDC {
+constexpr uint8_t
+  BUZZER = 0;
+} // namespace LEDC
+
+} // namespace PIN
 
 #endif
