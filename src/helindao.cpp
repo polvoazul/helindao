@@ -110,11 +110,12 @@ COROUTINE(printProfiling) {
   }
 }
 
-// #include "buzzer.hpp" - First drive buzzer with a mosfet! Not directly from pin
+#include "buzzer.hpp"// TODO: - First drive buzzer with a mosfet! Not directly from pin
 #include "whack_mole.hpp"
 #include "led_matrix.hpp"
 #include "strip_bounce.hpp"
 #include "led_control.hpp"
+#include "motors.hpp"
 
 // END COROUTINES
 

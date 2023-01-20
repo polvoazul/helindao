@@ -41,7 +41,7 @@ uint8_t constexpr
 |*/  WHACK_MOLE_DL_CB         = 33  ,/*|    OK     |   OK   |                                                                              |
 |*/  HIT_BUTTON               = 34  ,/*|    OK     |        |input only     no pullup                                                      |
 |*/  WHACK_MOLE_DB            = 35  ,/*|    OK     |        |input only     no pullup                                                      |
-|**  _                        = 36  ,/*|    OK     |        |input only     no pullup                                                      |
+|*/  MOTOR_READ_PIN           = 36  ,/*|    OK     |        |input only     no pullup                                                      |
 |**  _                        = 39  ,/*|    OK     |        |input only     no pullup                                                      |
 */
   __END__ = 99
