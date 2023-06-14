@@ -27,7 +27,7 @@ uint8_t constexpr
 |*/  MATRIX_LED_DATA          = 13  ,/*|    OK     |   OK   |                                                                              |
 |*/  BUZZER                   = 14  ,/*|   ~OK     |   OK   |outputs PWM signal at boot                                                    |
 |*/  HEALTH_CHECK_LED         = 15  ,/*|   ~OK     |   OK   |outputs PWM signal at boot, strapping pin                                     |
-|**  _                        = 16  ,/*|    OK     |   OK   |                                                                              |
+|*/  MOTOR_OUT                = 16  ,/*|    OK     |   OK   |                                                                              |
 |**  _                        = 17  ,/*|    OK     |   OK   |                                                                              |
 |**  _                        = 18  ,/*|    OK     |   OK   |                                                                              |
 |**  _                        = 19  ,/*|    OK     |   OK   |                                                                              |

@@ -12,7 +12,6 @@
 #include <Preferences.h>
 #include <bootloader_random.h>
 
-
 #define DEBUGGING 1
 
 #include "utils.hpp"
@@ -23,56 +22,20 @@
 
 #include "serial_button.hpp"
 
-
-
 constexpr bool PROFILE = false;
-
 
 using ace_routine::CoroutineScheduler;
 using namespace ace_button;
 using namespace ace_routine;
 
 
-
-
-// OUTPUTS
-
-// DATA
-struct Data {
-
-
-  void setup() = delete; // data needs to be dumb
-
-
-} data;
-
-
-
 // INPUTS
-
-struct Inputs { // convert to namespace and globals?
-  // bool _m;
-  void setup() {
-  }
-  void loop() {
-  }
-} input;
-
-
-// Helpers
-namespace {
-
-
-
-}
-
 
 
 ////////////// COROUTINES ////////////////
 
 COROUTINE(read_inputs) {
   COROUTINE_LOOP() {
-    input.loop();
     COROUTINE_DELAY(5);
   }
 }
@@ -120,13 +83,11 @@ COROUTINE(printProfiling) {
 
 // Aux Coroutines
 #include "led_control.hpp"
-// END COROUTINES
 
-
+////////////// END COROUTINES //////////////
 
 void dump() {
 }
-
 
 void set_coroutine_names() {
   #ifdef DEBUGGING
@@ -176,7 +137,6 @@ void setup() {
   Serial.println("Alive");
   delay(500);  // Maybe this helps upload success on boot?
   // _light_sleep();
-  input.setup();
   preferences.setup();
 
   set_coroutine_names();

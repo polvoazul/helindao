@@ -15,24 +15,27 @@ constexpr int N_INPUTS = 3;
 constexpr int SENSITIVITY = 100;
 using Inputs = int[N_INPUTS];
   
-[[gnu::pure]] int _selector(const Inputs & i) {
-  float x = i[0] / 100.0, y = i[1] / 100.0;
-  float out = abs(sin(x * y) * 1.2 + sin(pow(y, 1.2)));
-  out = out * 100 / 2.2;
+// Inputs are from 0 to 100 and outputs is a number from 0 to 99
+[[gnu::pure]] int16_t _selector(const Inputs & i) {
+  float x = i[0] / 100.0, y = i[1] / 100.0, z = i[2] / 100.0;
+  float out = abs( sin(x * y) * 1.2 + sin(pow(y, 1.2)) + sin(x)/(abs(10*y) + 0.5) + z);
+  out = out * 100 / 4.0;
   return out;
 }
 
-struct Digit{
+struct Digit {
   const int data_pin = -1;
   const int clock_pin = -1;
 
   union state {
     int number;
   } state;
+
   void setup() {
     pinMode(data_pin, OUTPUT);
     pinMode(clock_pin, OUTPUT);
   }
+
   void write(int number) {
     assert(number >= 0 && number < 100);
     state.number = number;
@@ -53,19 +56,20 @@ struct Knobs: BaseCoroutine {
   
   int runCoroutine() override {
     COROUTINE_LOOP() {
-      Inputs new_inputs;
       int cum_difference = 0;
       for(int i=0; i<N_INPUTS; ++i){
         int new_input = analogRead(input_pins[i]);
         cum_difference += abs(new_input - last_inputs[i]);
         last_inputs[i] = new_input;
       }
-      if (cum_difference < SENSITIVITY) {
-        COROUTINE_DELAY(10);
-      } else {
-        int selector_out = _selector(new_inputs);
+      if (cum_difference > SENSITIVITY) {
+        int16_t selector_out = _selector(last_inputs);
         digit_display.write(selector_out);
+        set_mode(selector_out);
+      } else {
+        COROUTINE_DELAY(100);
       }
+      COROUTINE_DELAY(30);
     }
   }
   void setupCoroutine() {
@@ -83,7 +87,7 @@ struct Knobs: BaseCoroutine {
       mode = MODE2;
     else if (s < 30)
       mode = MODE3;
-    else 
+    else // 30 < s < 100
       mode = MODE4;
   }
 
